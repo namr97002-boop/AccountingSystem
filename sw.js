@@ -1,27 +1,59 @@
-const CACHE_NAME = 'gold-system-v1';
-// قائمة الملفات التي سيتم حفظها في ذاكرة الهاتف لتعمل بدون نت
-const assets = [
-  './',
-  './index.html',
-  './manifest.json',
-  './icon.png'
+// ==================== Service Worker معدل للعمل مع شاشة الدخول ====================
+const CACHE_NAME = 'muhasaba-v1';
+const urlsToCache = [
+    './',
+    './index.html',
+    './manifest.json',
+    './icon.png'
 ];
 
-// مرحلة التثبيت: حفظ الملفات في الكاش
+// تثبيت الـ Service Worker
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      console.log('تم حفظ ملفات النظام للعمل أوفلاين');
-      return cache.addAll(assets);
-    })
-  );
+    event.waitUntil(
+        caches.open(CACHE_NAME)
+            .then(cache => cache.addAll(urlsToCache))
+            .catch(err => console.log('Cache install error:', err))
+    );
+    self.skipWaiting();
 });
 
-// مرحلة التشغيل: جلب الملفات من الكاش حتى لو انقطع الإنترنت
+// استقبال الطلبات
 self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request).then(response => {
-      return response || fetch(event.request);
-    })
-  );
+    // تجاهل طلبات الخطوط الخارجية (Google Fonts) - هذا هو الحل لمشكلتك!
+    if (event.request.url.includes('fonts.googleapis') || 
+        event.request.url.includes('fonts.gstatic') ||
+        event.request.url.includes('cdnjs.cloudflare.com')) {
+        return;
+    }
+    
+    event.respondWith(
+        caches.match(event.request)
+            .then(response => {
+                // إذا وجد في الكاش، أرجعه
+                if (response) {
+                    return response;
+                }
+                // وإلا، حاول تجلبه من الشبكة
+                return fetch(event.request).catch(() => {
+                    // عند فشل الشبكة، أعد الصفحة الرئيسية
+                    if (event.request.mode === 'navigate') {
+                        return caches.match('./index.html');
+                    }
+                    return null;
+                });
+            })
+    );
+});
+
+// تنظيف الكاش القديم
+self.addEventListener('activate', event => {
+    event.waitUntil(
+        caches.keys().then(keys => {
+            return Promise.all(
+                keys.filter(key => key !== CACHE_NAME)
+                    .map(key => caches.delete(key))
+            );
+        })
+    );
+    self.clients.claim();
 });
