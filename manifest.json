@@ -1,27 +1,24 @@
-name: Build Android APK
-on: [push]
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
-      - name: Setup Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'zulu'
-          java-version: '11'
-
-      - name: Build APK
-        run: |
-          npm install -g @bubblewrap/cli
-          # إنشاء ملف إعدادات افتراضي لتجنب التوقف
-          bubblewrap init --manifest=manifest.json --no-prompt || true
-          bubblewrap build --skipConfig
-        
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: Accounting-System-App
-          path: ./*.apk
+{
+  "name": "نظام محاسبي",
+  "short_name": "محاسبة",
+  "description": "نظام محاسبي متكامل - فواتير، تقارير، أرصدة، سندات قبض وصرف",
+  "start_url": "/AccountingSystem/",
+  "display": "standalone",
+  "theme_color": "#d4af37",
+  "background_color": "#0a0a0c",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
