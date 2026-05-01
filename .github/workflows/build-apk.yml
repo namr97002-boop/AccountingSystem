@@ -1,0 +1,109 @@
+name: Build-APK-Pro
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ☕ جافا
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # 🤖 Android SDK
+      - uses: android-actions/setup-android@v3
+
+      # 📁 إنشاء المشروع
+      - name: Create Project Structure
+        run: |
+          mkdir -p app/src/main/assets
+          mkdir -p app/src/main/java/com/sulaiman/store
+          mkdir -p app/src/main/res/drawable
+          mkdir -p app/src/main/res/values
+          cp index.html app/src/main/assets/
+          cp icon.png app/src/main/assets/
+
+      # 🎨 اسم التطبيق
+      - name: strings.xml
+        run: |
+          echo '<resources><string name="app_name">محلات للتجارة العامة</string></resources>' > app/src/main/res/values/strings.xml
+
+      # 🎯 أيقونة
+      - name: App Icon
+        run: |
+          curl -L https://i.postimg.cc/9QLJBVcJ/1777228627401.png -o app/src/main/res/drawable/icon.png
+
+      # ⚙️ gradle
+      - name: gradle files
+        run: |
+          echo 'buildscript { repositories { google(); mavenCentral() } dependencies { classpath "com.android.tools.build:gradle:8.2.0" } }' > build.gradle
+          echo 'allprojects { repositories { google(); mavenCentral() } }' >> build.gradle
+          echo 'rootProject.name = "Store"' > settings.gradle
+          echo 'include ":app"' >> settings.gradle
+          echo 'org.gradle.jvmargs=-Xmx2048m' > gradle.properties
+          echo 'android.useAndroidX=true' >> gradle.properties
+          echo 'android.enableJetifier=true' >> gradle.properties
+
+      # 📦 app build.gradle
+      - name: app gradle
+        run: |
+          echo 'plugins { id "com.android.application" }' > app/build.gradle
+          echo 'android { namespace "com.sulaiman.store"; compileSdk 34; defaultConfig { applicationId "com.sulaiman.store"; minSdk 21; targetSdk 34; versionCode 1; versionName "1.0" } }' >> app/build.gradle
+          echo 'dependencies { implementation "androidx.appcompat:appcompat:1.7.0" }' >> app/build.gradle
+
+      # 📱 AndroidManifest
+      - name: manifest
+        run: |
+          echo '<?xml version="1.0" encoding="utf-8"?>' > app/src/main/AndroidManifest.xml
+          echo '<manifest xmlns:android="http://schemas.android.com/apk/res/android">' >> app/src/main/AndroidManifest.xml
+          echo '<uses-permission android:name="android.permission.INTERNET"/>' >> app/src/main/AndroidManifest.xml
+          echo '<application android:label="@string/app_name" android:icon="@drawable/icon" android:theme="@android:style/Theme.NoTitleBar.Fullscreen">' >> app/src/main/AndroidManifest.xml
+          echo '<activity android:name=".MainActivity" android:exported="true">' >> app/src/main/AndroidManifest.xml
+          echo '<intent-filter>' >> app/src/main/AndroidManifest.xml
+          echo '<action android:name="android.intent.action.MAIN"/>' >> app/src/main/AndroidManifest.xml
+          echo '<category android:name="android.intent.category.LAUNCHER"/>' >> app/src/main/AndroidManifest.xml
+          echo '</intent-filter></activity></application></manifest>' >> app/src/main/AndroidManifest.xml
+
+      # 💻 MainActivity
+      - name: MainActivity
+        run: |
+          echo 'package com.sulaiman.store;' > app/src/main/java/com/sulaiman/store/MainActivity.java
+          echo 'import android.app.Activity;' >> app/src/main/java/com/sulaiman/store/MainActivity.java
+          echo 'import android.os.Bundle;' >> app/src/main/java/com/sulaiman/store/MainActivity.java
+          echo 'import android.webkit.WebView;' >> app/src/main/java/com/sulaiman/store/MainActivity.java
+          echo 'import android.webkit.WebViewClient;' >> app/src/main/java/com/sulaiman/store/MainActivity.java
+          echo 'public class MainActivity extends Activity {' >> app/src/main/java/com/sulaiman/store/MainActivity.java
+          echo 'protected void onCreate(Bundle b) {' >> app/src/main/java/com/sulaiman/store/MainActivity.java
+          echo 'super.onCreate(b);' >> app/src/main/java/com/sulaiman/store/MainActivity.java
+          echo 'WebView w = new WebView(this);' >> app/src/main/java/com/sulaiman/store/MainActivity.java
+          echo 'w.getSettings().setJavaScriptEnabled(true);' >> app/src/main/java/com/sulaiman/store/MainActivity.java
+          echo 'w.getSettings().setDomStorageEnabled(true);' >> app/src/main/java/com/sulaiman/store/MainActivity.java
+          echo 'w.getSettings().setDatabaseEnabled(true);' >> app/src/main/java/com/sulaiman/store/MainActivity.java
+          echo 'w.setWebViewClient(new WebViewClient());' >> app/src/main/java/com/sulaiman/store/MainActivity.java
+          echo 'w.loadUrl("file:///android_asset/index.html");' >> app/src/main/java/com/sulaiman/store/MainActivity.java
+          echo 'setContentView(w);' >> app/src/main/java/com/sulaiman/store/MainActivity.java
+          echo '}}' >> app/src/main/java/com/sulaiman/store/MainActivity.java
+
+      # 🧱 إنشاء gradle wrapper
+      - name: Gradle Wrapper
+        run: gradle wrapper
+
+      - name: chmod
+        run: chmod +x gradlew
+
+      # 🔨 بناء APK
+      - name: Build APK
+        run: ./gradlew assembleDebug
+
+      # 📤 رفع الملف
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Sulaiman-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
